@@ -34,7 +34,7 @@ export interface AgentCreate {
   description?: string
   goal: string
   tools?: string[]
-  trigger?: string
+  trigger?: Record<string, unknown>
   credentials?: Record<string, string>
   sms_to?: string
 }
@@ -46,10 +46,10 @@ export const agentsApi = {
   update: (id: string, data: Partial<AgentCreate>) =>
     request<Agent>(`/agents/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) => request<void>(`/agents/${id}`, { method: 'DELETE' }),
-  trigger: (id: string, input?: string) =>
+  trigger: (id: string, input?: string, credentials?: Record<string, string>) =>
     request<{ run_id: string }>(`/agents/${id}/run`, {
       method: 'POST',
-      body: JSON.stringify({ input: input ?? '' }),
+      body: JSON.stringify({ input: input ?? '', credentials }),
     }),
 }
 

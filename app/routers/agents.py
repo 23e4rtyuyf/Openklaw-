@@ -123,7 +123,11 @@ async def run_agent_now(agent_id: str, req: RunRequest = None, db: Session = Dep
     db.commit()
 
     input_data = (req.input_data if req else None) or {}
-    result_data = await run_agent(_agent_data(agent), input_data)
+    # Merge runtime credentials (from browser localStorage) over stored agent credentials
+    agent_data = _agent_data(agent)
+    if req and req.credentials:
+        agent_data["credentials"] = {**agent_data["credentials"], **req.credentials}
+    result_data = await run_agent(agent_data, input_data)
 
     run.status = result_data["status"]
     run.steps = result_data["steps"]

@@ -10,7 +10,7 @@ import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Dialog } from '../components/ui/Dialog'
 import AgentBuilderChat from '../components/agents/AgentBuilderChat'
-import { timeAgo, cn } from '../lib/utils'
+import { timeAgo, cn, readAllCredentials } from '../lib/utils'
 
 function RunRow({ run }: { run: Run }) {
   const [expanded, setExpanded] = useState(false)
@@ -86,7 +86,7 @@ export default function AgentDetail() {
   })
 
   const trigger = useMutation({
-    mutationFn: () => agentsApi.trigger(agentId),
+    mutationFn: () => agentsApi.trigger(agentId, undefined, readAllCredentials()),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['runs', agentId] }),
   })
 

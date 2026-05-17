@@ -3,7 +3,7 @@ import { Send, Bot, User, Loader2 } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { chatApi, agentsApi, type ChatMessage, type AgentCreate } from '../../lib/api'
 import { Button } from '../ui/Button'
-import { cn } from '../../lib/utils'
+import { cn, readAllCredentials } from '../../lib/utils'
 
 interface Props {
   onCreated?: (id: string) => void
@@ -31,12 +31,22 @@ export default function AgentBuilderChat({ onCreated }: Props) {
     mutationFn: (msgs: ChatMessage[]) => chatApi.newAgent(msgs),
     onSuccess: (data) => {
       setMessages(m => [...m, { role: 'assistant', content: data.reply }])
-      if (data.agent_config) setPendingConfig(data.agent_config)
+      if (data.agent_config) {
+        // Remap suggested_trigger → trigger and attach stored credentials
+        const raw = data.agent_config as unknown as Record<string, unknown>
+        const config: AgentCreate = {
+          ...(raw as unknown as AgentCreate),
+          trigger: (raw.suggested_trigger ?? raw.trigger) as AgentCreate['trigger'],
+          credentials: readAllCredentials(),
+        }
+        setPendingConfig(config)
+      }
     },
   })
 
   const deploy = useMutation({
-    mutationFn: (config: AgentCreate) => agentsApi.create(config),
+    mutationFn: (config: AgentCreate) =>
+      agentsApi.create({ ...config, credentials: { ...readAllCredentials(), ...(config.credentials ?? {}) } }),
     onSuccess: (agent) => {
       queryClient.invalidateQueries({ queryKey: ['agents'] })
       onCreated?.(agent.id)

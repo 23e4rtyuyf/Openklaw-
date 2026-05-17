@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { agentsApi, type Agent } from '../../lib/api'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
-import { timeAgo, statusBg } from '../../lib/utils'
+import { timeAgo, statusBg, readAllCredentials } from '../../lib/utils'
 
 const TRIGGER_ICONS: Record<string, React.ReactNode> = {
   cron: <Clock size={11} />,
@@ -23,7 +23,7 @@ export default function AgentCard({ agent, lastRun }: AgentCardProps) {
   const queryClient = useQueryClient()
 
   const trigger = useMutation({
-    mutationFn: () => agentsApi.trigger(agent.id),
+    mutationFn: () => agentsApi.trigger(agent.id, undefined, readAllCredentials()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['runs'] })
     },

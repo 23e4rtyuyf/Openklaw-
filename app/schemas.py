@@ -34,6 +34,7 @@ class AgentOut(BaseModel):
     webhook_token: Optional[str]
     sms_to: Optional[str]
     status: str
+    credentials: dict = {}
     created_at: datetime
     updated_at: datetime
 
@@ -80,3 +81,4 @@ class ChatResponse(BaseModel):
 
 class RunRequest(BaseModel):
     input_data: dict = {}
+    credentials: dict = {}

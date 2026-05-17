@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Message, Agent
+from app.models import Message
 from app.schemas import MessageIn, MessageOut, ChatResponse
 from app.ai.agent_builder import build_agent_from_chat
 
@@ -72,32 +72,8 @@ async def chat_with_agent(agent_id: str, body: MessageIn, db: Session = Depends(
 
 @router.post("/chat/new", response_model=ChatResponse)
 async def new_chat(body: MessageIn, db: Session = Depends(get_db)):
-    """Start a new conversation without an existing agent."""
+    """Start a new conversation without an existing agent. Does NOT create an agent —
+    the frontend calls POST /agents explicitly when the user clicks Deploy."""
     messages_for_ai = [{"role": "user", "content": body.message}]
     reply, agent_config = await build_agent_from_chat(messages_for_ai)
-
-    agent_id = None
-    if agent_config:
-        import uuid as _uuid
-        agent = Agent(
-            id=str(_uuid.uuid4()),
-            name=agent_config.get("name", "New Agent"),
-            description=body.message,
-            goal=agent_config.get("goal"),
-            tools=agent_config.get("tools", []),
-            trigger=agent_config.get("suggested_trigger", {"type": "manual", "config": {}}),
-            webhook_token=str(_uuid.uuid4()),
-            status="draft",
-        )
-        db.add(agent)
-        db.commit()
-        agent_id = agent.id
-
-    user_msg = Message(id=str(uuid.uuid4()), agent_id=agent_id, role="user", content=body.message)
-    assistant_msg = Message(id=str(uuid.uuid4()), agent_id=agent_id, role="assistant", content=reply)
-    db.add(user_msg)
-    db.add(assistant_msg)
-    db.commit()
-
-    msgs = [MessageOut.model_validate(user_msg), MessageOut.model_validate(assistant_msg)]
-    return ChatResponse(reply=reply, agent_config=agent_config, messages=msgs)
+    return ChatResponse(reply=reply, agent_config=agent_config)

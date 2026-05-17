@@ -39,6 +39,20 @@ export function statusColor(status: string): string {
   }
 }
 
+export function readAllCredentials(): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key?.startsWith('creds_')) {
+      try {
+        const vals = JSON.parse(localStorage.getItem(key) ?? '{}') as Record<string, string>
+        Object.assign(result, vals)
+      } catch { /* ignore malformed entries */ }
+    }
+  }
+  return result
+}
+
 export function statusBg(status: string): string {
   switch (status) {
     case 'success': return 'bg-emerald-500/10 text-emerald-400'

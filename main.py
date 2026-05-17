@@ -52,6 +52,11 @@ app.include_router(sheets_router.router)
 # Create uploads directory
 os.makedirs("uploads", exist_ok=True)
 
+@app.get("/health", include_in_schema=True)
+def health():
+    return {"status": "ok", "app": "OpenKlaw"}
+
+
 # Serve built frontend (Vite output)
 _dist = "frontend/dist"
 if os.path.isdir(_dist):
@@ -71,11 +76,6 @@ else:
     @app.get("/", include_in_schema=False)
     def serve_frontend():  # type: ignore[misc]
         return FileResponse("frontend/index.html")
-
-
-@app.get("/health", include_in_schema=True)
-def health():
-    return {"status": "ok", "app": "OpenKlaw"}
 
 
 if __name__ == "__main__":
