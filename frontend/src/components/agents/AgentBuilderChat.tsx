@@ -6,7 +6,7 @@ import { Button } from '../ui/Button'
 import { cn } from '../../lib/utils'
 
 interface Props {
-  onCreated?: (id: number) => void
+  onCreated?: (id: string) => void
 }
 
 const SUGGESTIONS = [

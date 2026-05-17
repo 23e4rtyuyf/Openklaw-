@@ -69,7 +69,7 @@ function RunRow({ run }: { run: Run }) {
 
 export default function AgentDetail() {
   const { id } = useParams<{ id: string }>()
-  const agentId = Number(id)
+  const agentId = id ?? ''
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [chatOpen, setChatOpen] = useState(false)

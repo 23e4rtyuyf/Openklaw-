@@ -91,6 +91,7 @@ export default function Sheets() {
       </aside>
 
       {/* Main content */}
+      <Tabs value={tab} onChange={setTab}>
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar with tabs */}
         <div className="border-b border-[#1f2937] px-5 py-3 flex items-center gap-3">
@@ -119,7 +120,6 @@ export default function Sheets() {
           )}
         </div>
 
-        <Tabs value={tab} onChange={setTab}>
           <TabPanel value="connect">
             <div className="p-6 max-w-2xl mx-auto space-y-8 animate-fade-in">
               <div>
@@ -161,8 +161,8 @@ export default function Sheets() {
               </div>
             </TabPanel>
           )}
-        </Tabs>
       </div>
+      </Tabs>
     </div>
   )
 }

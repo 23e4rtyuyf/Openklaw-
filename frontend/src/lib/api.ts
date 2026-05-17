@@ -14,7 +14,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 // --- Agents ---
 export interface Agent {
-  id: number
+  id: string
   name: string
   description: string
   goal: string
@@ -41,13 +41,13 @@ export interface AgentCreate {
 
 export const agentsApi = {
   list: () => request<Agent[]>('/agents'),
-  get: (id: number) => request<Agent>(`/agents/${id}`),
+  get: (id: string) => request<Agent>(`/agents/${id}`),
   create: (data: AgentCreate) => request<Agent>('/agents', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: number, data: Partial<AgentCreate>) =>
+  update: (id: string, data: Partial<AgentCreate>) =>
     request<Agent>(`/agents/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  delete: (id: number) => request<void>(`/agents/${id}`, { method: 'DELETE' }),
-  trigger: (id: number, input?: string) =>
-    request<{ run_id: number }>(`/agents/${id}/trigger`, {
+  delete: (id: string) => request<void>(`/agents/${id}`, { method: 'DELETE' }),
+  trigger: (id: string, input?: string) =>
+    request<{ run_id: string }>(`/agents/${id}/run`, {
       method: 'POST',
       body: JSON.stringify({ input: input ?? '' }),
     }),
@@ -62,8 +62,8 @@ export interface RunStep {
 }
 
 export interface Run {
-  id: number
-  agent_id: number
+  id: string
+  agent_id: string
   trigger_type: string
   status: string
   plan?: string
@@ -74,9 +74,9 @@ export interface Run {
 }
 
 export const runsApi = {
-  list: (agentId?: number) =>
-    request<Run[]>(agentId ? `/agents/${agentId}/runs` : '/runs'),
-  get: (id: number) => request<Run>(`/runs/${id}`),
+  list: (agentId?: string) =>
+    request<Run[]>(agentId ? `/runs?agent_id=${agentId}` : '/runs'),
+  get: (id: string) => request<Run>(`/runs/${id}`),
 }
 
 // --- Chat ---
@@ -92,11 +92,14 @@ export interface ChatResponse {
 
 export const chatApi = {
   newAgent: (messages: ChatMessage[]) =>
-    request<ChatResponse>('/chat/new', { method: 'POST', body: JSON.stringify({ messages }) }),
-  withAgent: (id: number, messages: ChatMessage[]) =>
+    request<ChatResponse>('/agents/chat/new', {
+      method: 'POST',
+      body: JSON.stringify({ message: messages.at(-1)?.content ?? '' }),
+    }),
+  withAgent: (id: string, messages: ChatMessage[]) =>
     request<ChatResponse>(`/agents/${id}/chat`, {
       method: 'POST',
-      body: JSON.stringify({ messages }),
+      body: JSON.stringify({ message: messages.at(-1)?.content ?? '' }),
     }),
 }
 
