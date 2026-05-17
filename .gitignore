@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.pyo
+openklaw.db
+.env
+*.db-shm
+*.db-wal
