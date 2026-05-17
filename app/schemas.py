@@ -3,18 +3,14 @@ from typing import Any, Optional
 from pydantic import BaseModel
 
 
-class TriggerConfig(BaseModel):
-    type: str = "manual"  # manual | cron | webhook
-    config: dict = {}
-
-
 class AgentCreate(BaseModel):
     name: str
     description: str
     goal: Optional[str] = None
     tools: list[str] = []
     trigger: dict = {"type": "manual", "config": {}}
-    telegram_chat_id: Optional[str] = None
+    sms_to: Optional[str] = None
+    credentials: dict = {}
 
 
 class AgentUpdate(BaseModel):
@@ -23,7 +19,8 @@ class AgentUpdate(BaseModel):
     goal: Optional[str] = None
     tools: Optional[list[str]] = None
     trigger: Optional[dict] = None
-    telegram_chat_id: Optional[str] = None
+    sms_to: Optional[str] = None
+    credentials: Optional[dict] = None
     status: Optional[str] = None
 
 
@@ -35,7 +32,7 @@ class AgentOut(BaseModel):
     tools: list[str]
     trigger: dict
     webhook_token: Optional[str]
-    telegram_chat_id: Optional[str]
+    sms_to: Optional[str]
     status: str
     created_at: datetime
     updated_at: datetime

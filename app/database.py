@@ -18,3 +18,18 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def run_migrations():
+    """Add new columns to existing tables without dropping data."""
+    migrations = [
+        "ALTER TABLE agents ADD COLUMN sms_to TEXT",
+        "ALTER TABLE agents ADD COLUMN credentials TEXT DEFAULT '{}'",
+    ]
+    with engine.connect() as conn:
+        for sql in migrations:
+            try:
+                conn.execute(__import__("sqlalchemy").text(sql))
+                conn.commit()
+            except Exception:
+                pass

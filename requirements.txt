@@ -9,3 +9,7 @@ openai>=1.30
 anthropic>=0.28
 aiofiles>=23.0
 python-multipart>=0.0.9
+twilio>=9.0
+html2text>=2024.2
+google-api-python-client>=2.100
+google-auth>=2.23

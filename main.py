@@ -7,12 +7,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from app.database import engine, Base
+from app.database import engine, Base, run_migrations
 from app.models import Agent, Run, Message
 from app.scheduler import start_scheduler, stop_scheduler, register_agent
-from app.routers import agents, runs, chat, webhooks, telegram
+from app.routers import agents, runs, chat, webhooks
+from app.routers import slack as slack_router
 
 Base.metadata.create_all(bind=engine)
+run_migrations()
 
 
 @asynccontextmanager
@@ -44,7 +46,7 @@ app.include_router(agents.router)
 app.include_router(runs.router)
 app.include_router(chat.router)
 app.include_router(webhooks.router)
-app.include_router(telegram.router)
+app.include_router(slack_router.router)
 
 app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
 

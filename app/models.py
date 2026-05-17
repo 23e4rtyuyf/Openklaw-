@@ -20,8 +20,9 @@ class Agent(Base):
     tools = Column(JSON, default=list)
     trigger = Column(JSON, default=lambda: {"type": "manual", "config": {}})
     webhook_token = Column(String, unique=True, nullable=True)
-    telegram_chat_id = Column(String, nullable=True)
+    sms_to = Column(String, nullable=True)
     memory = Column(JSON, default=dict)
+    credentials = Column(JSON, default=dict)
     status = Column(String, default="draft")  # draft | active | paused
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

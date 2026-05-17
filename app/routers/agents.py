@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -16,10 +16,19 @@ def _schedule_agent(agent: Agent):
     trigger = agent.trigger or {}
     if trigger.get("type") == "cron" and agent.status == "active":
         cron_expr = trigger.get("config", {}).get("cron", "0 9 * * *")
-        from app.routers.agents import _run_agent_cron
         sched_module.register_agent(agent.id, cron_expr, _run_agent_cron)
     else:
         sched_module.unregister_agent(agent.id)
+
+
+def _agent_data(agent: Agent) -> dict:
+    return {
+        "goal": agent.goal,
+        "description": agent.description,
+        "memory": agent.memory or {},
+        "credentials": agent.credentials or {},
+        "sms_to": agent.sms_to or "",
+    }
 
 
 async def _run_agent_cron(agent_id: str):
@@ -33,13 +42,7 @@ async def _run_agent_cron(agent_id: str):
         db.add(run)
         db.commit()
 
-        agent_data = {
-            "goal": agent.goal,
-            "description": agent.description,
-            "memory": agent.memory or {},
-            "telegram_chat_id": agent.telegram_chat_id or "",
-        }
-        result_data = await run_agent(agent_data)
+        result_data = await run_agent(_agent_data(agent))
 
         run.status = result_data["status"]
         run.steps = result_data["steps"]
@@ -58,7 +61,6 @@ def list_agents(db: Session = Depends(get_db)):
 
 @router.post("", response_model=AgentOut)
 def create_agent(data: AgentCreate, db: Session = Depends(get_db)):
-    token = str(uuid.uuid4()) if data.trigger.get("type") == "webhook" else str(uuid.uuid4())
     agent = Agent(
         id=str(uuid.uuid4()),
         name=data.name,
@@ -66,8 +68,9 @@ def create_agent(data: AgentCreate, db: Session = Depends(get_db)):
         goal=data.goal,
         tools=data.tools,
         trigger=data.trigger,
-        webhook_token=token,
-        telegram_chat_id=data.telegram_chat_id,
+        webhook_token=str(uuid.uuid4()),
+        sms_to=data.sms_to,
+        credentials=data.credentials,
         status="draft",
     )
     db.add(agent)
@@ -119,14 +122,8 @@ async def run_agent_now(agent_id: str, req: RunRequest = None, db: Session = Dep
     db.add(run)
     db.commit()
 
-    agent_data = {
-        "goal": agent.goal,
-        "description": agent.description,
-        "memory": agent.memory or {},
-        "telegram_chat_id": agent.telegram_chat_id or "",
-    }
     input_data = (req.input_data if req else None) or {}
-    result_data = await run_agent(agent_data, input_data)
+    result_data = await run_agent(_agent_data(agent), input_data)
 
     run.status = result_data["status"]
     run.steps = result_data["steps"]
