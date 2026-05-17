@@ -2,12 +2,12 @@ import json
 from typing import Optional
 
 
-def _get_service(service_account_json: str | dict):
-    from google.oauth2 import service_account
+def _get_service(service_account_json: str | dict = ""):
     from googleapiclient.discovery import build
-    creds_dict = json.loads(service_account_json) if isinstance(service_account_json, str) else service_account_json
-    scopes = ["https://www.googleapis.com/auth/calendar"]
-    creds = service_account.Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    from app.google_auth import get_google_credentials
+    creds = get_google_credentials(service_account_json if isinstance(service_account_json, str) else json.dumps(service_account_json))
+    if not creds:
+        raise ValueError("No Google credentials available. Sign in with Google in Settings.")
     return build("calendar", "v3", credentials=creds, cache_discovery=False)
 
 

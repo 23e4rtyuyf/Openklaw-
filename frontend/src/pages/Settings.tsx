@@ -1,7 +1,8 @@
-import { useState, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Settings as SettingsIcon, Mail, MessageSquare, Github, Database, Cloud,
-  CheckCircle2, XCircle, ChevronDown, ChevronRight, Key, ExternalLink,
+  CheckCircle2, XCircle, ChevronDown, ChevronRight, Key, LogIn, LogOut,
 } from 'lucide-react'
 import { Input, Textarea } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
@@ -11,7 +12,6 @@ interface Integration {
   name: string
   icon: ReactNode
   fields: { key: string; label: string; placeholder: string; type?: string; textarea?: boolean }[]
-  docsUrl?: string
 }
 
 const INTEGRATIONS: Integration[] = [
@@ -21,21 +21,13 @@ const INTEGRATIONS: Integration[] = [
     icon: <Key size={15} className="text-violet-400" />,
     fields: [
       { key: 'OPENAI_API_KEY', label: 'OpenAI API Key', placeholder: 'sk-...' },
-      { key: 'ANTHROPIC_API_KEY', label: 'Anthropic API Key', placeholder: 'sk-ant-...' },
-      { key: 'AI_MODEL', label: 'Model', placeholder: 'gpt-4o-mini' },
-    ],
-  },
-  {
-    id: 'google',
-    name: 'Google (Sheets, Drive, Calendar, Docs)',
-    icon: <Cloud size={15} className="text-sky-400" />,
-    fields: [
-      { key: 'GOOGLE_SERVICE_ACCOUNT_JSON', label: 'Service Account JSON', placeholder: '{"type":"service_account",...}', textarea: true },
+      { key: 'ANTHROPIC_API_KEY', label: 'Anthropic API Key', placeholder: 'sk-ant-... (set in Replit Secrets)' },
+      { key: 'AI_MODEL', label: 'Model override', placeholder: 'claude-3-5-haiku-20241022' },
     ],
   },
   {
     id: 'gmail',
-    name: 'Gmail',
+    name: 'Gmail (SMTP app password)',
     icon: <Mail size={15} className="text-red-400" />,
     fields: [
       { key: 'GMAIL_EMAIL', label: 'Gmail Address', placeholder: 'you@gmail.com' },
@@ -88,9 +80,81 @@ const INTEGRATIONS: Integration[] = [
   },
 ]
 
+function GoogleConnectionCard({ flashMsg }: { flashMsg: string }) {
+  const [status, setStatus] = useState<{ connected: boolean; email: string } | null>(null)
+  const [disconnecting, setDisconnecting] = useState(false)
+
+  useEffect(() => {
+    fetch('/auth/google/status')
+      .then(r => r.json())
+      .then(d => setStatus(d))
+      .catch(() => setStatus({ connected: false, email: '' }))
+  }, [flashMsg])
+
+  const disconnect = async () => {
+    setDisconnecting(true)
+    await fetch('/auth/google/disconnect', { method: 'POST' })
+    setStatus({ connected: false, email: '' })
+    setDisconnecting(false)
+  }
+
+  return (
+    <div className="glass-card overflow-hidden">
+      <div className="flex items-center gap-3 px-4 py-3.5">
+        <div className="w-8 h-8 rounded-lg bg-[#1f2937] flex items-center justify-center shrink-0">
+          <Cloud size={15} className="text-sky-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="text-sm font-medium text-gray-200">Google (Sheets, Drive, Docs, Calendar)</span>
+          {status?.connected && (
+            <p className="text-xs text-emerald-400 truncate">{status.email}</p>
+          )}
+        </div>
+        {status?.connected
+          ? <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
+          : <XCircle size={13} className="text-gray-600 shrink-0" />
+        }
+      </div>
+
+      {flashMsg && (
+        <div className={`px-4 py-2 text-xs border-t border-[#1f2937] ${
+          flashMsg.startsWith('Connected') ? 'text-emerald-400' : 'text-red-400'
+        }`}>
+          {flashMsg}
+        </div>
+      )}
+
+      <div className="px-4 pb-4 pt-1 border-t border-[#1f2937]">
+        <p className="text-xs text-gray-500 mt-2 mb-3">
+          Sign in once to let all Google tools (Sheets, Drive, Docs, Calendar) use your account.
+          Requires <code className="text-sky-400">GOOGLE_CLIENT_ID</code> and{' '}
+          <code className="text-sky-400">GOOGLE_CLIENT_SECRET</code> in Replit Secrets.
+        </p>
+        {status?.connected ? (
+          <Button variant="danger" size="sm" onClick={disconnect} disabled={disconnecting}>
+            <LogOut size={13} />
+            {disconnecting ? 'Disconnecting…' : 'Disconnect Google'}
+          </Button>
+        ) : (
+          <a href="/auth/google">
+            <Button variant="primary" size="sm">
+              <LogIn size={13} />
+              Connect with Google
+            </Button>
+          </a>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function IntegrationCard({ integration }: { integration: Integration }) {
   const [expanded, setExpanded] = useState(false)
-  const [values, setValues] = useState<Record<string, string>>({})
+  const [values, setValues] = useState<Record<string, string>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(`creds_${integration.id}`) ?? '{}')
+    } catch { return {} }
+  })
   const [saved, setSaved] = useState(false)
 
   const handleSave = () => {
@@ -99,8 +163,7 @@ function IntegrationCard({ integration }: { integration: Integration }) {
     setTimeout(() => setSaved(false), 2000)
   }
 
-  const storedJson = localStorage.getItem(`creds_${integration.id}`)
-  const hasCredentials = storedJson && Object.values(JSON.parse(storedJson) as Record<string, string>).some(v => v)
+  const hasCredentials = Object.values(values).some(v => v)
 
   return (
     <div className="glass-card overflow-hidden">
@@ -122,7 +185,7 @@ function IntegrationCard({ integration }: { integration: Integration }) {
       {expanded && (
         <div className="px-4 pb-4 pt-1 border-t border-[#1f2937] space-y-3">
           <p className="text-xs text-gray-500 mt-2">
-            These credentials are saved locally in your browser and sent to agents as needed.
+            Saved locally in your browser and sent to agents as needed.
           </p>
           {integration.fields.map(f => (
             f.textarea ? (
@@ -158,6 +221,22 @@ function IntegrationCard({ integration }: { integration: Integration }) {
 }
 
 export default function Settings() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [flashMsg, setFlashMsg] = useState('')
+
+  useEffect(() => {
+    const connected = searchParams.get('google_connected')
+    const email = searchParams.get('email')
+    const error = searchParams.get('google_error')
+    if (connected) {
+      setFlashMsg(`Connected as ${email || 'Google account'}`)
+      setSearchParams({}, { replace: true })
+    } else if (error) {
+      setFlashMsg(`Error: ${decodeURIComponent(error)}`)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
+
   return (
     <div className="px-6 py-6 max-w-2xl mx-auto animate-fade-in">
       <div className="flex items-center gap-3 mb-6">
@@ -167,9 +246,10 @@ export default function Settings() {
 
       <div className="space-y-2">
         <p className="text-xs text-gray-500 mb-4">
-          Configure your integrations. Credentials are stored in your browser and sent to agents in their credential context.
-          For production, set these as environment variables in your Replit secrets.
+          Configure your integrations. Credentials are stored in your browser and sent to agents when they run.
+          For persistent server-side keys, use Replit Secrets.
         </p>
+        <GoogleConnectionCard flashMsg={flashMsg} />
         {INTEGRATIONS.map(i => <IntegrationCard key={i.id} integration={i} />)}
       </div>
     </div>

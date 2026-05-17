@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 class AgentCreate(BaseModel):
     name: str
-    description: str
+    description: str = ""
     goal: Optional[str] = None
     tools: list[str] = []
     trigger: dict = {"type": "manual", "config": {}}

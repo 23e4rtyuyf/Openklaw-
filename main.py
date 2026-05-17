@@ -10,7 +10,7 @@ load_dotenv()
 from app.database import engine, Base, run_migrations
 from app.models import Agent, Run, Message
 from app.scheduler import start_scheduler, stop_scheduler, register_agent
-from app.routers import agents, runs, chat, webhooks, sheets as sheets_router
+from app.routers import agents, runs, chat, webhooks, sheets as sheets_router, auth as auth_router
 from app.routers import slack as slack_router
 
 Base.metadata.create_all(bind=engine)
@@ -48,6 +48,7 @@ app.include_router(chat.router)
 app.include_router(webhooks.router)
 app.include_router(slack_router.router)
 app.include_router(sheets_router.router)
+app.include_router(auth_router.router)
 
 # Create uploads directory
 os.makedirs("uploads", exist_ok=True)

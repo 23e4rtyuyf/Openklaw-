@@ -58,17 +58,12 @@ def google_preview(req: GooglePreviewRequest):
         raise HTTPException(400, "Could not extract sheet ID from URL")
     sheet_id = m.group(1)
 
-    creds_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
-    if not creds_json:
-        raise HTTPException(400, "Google service account not configured (set GOOGLE_SERVICE_ACCOUNT_JSON)")
-
     try:
-        from google.oauth2 import service_account
         from googleapiclient.discovery import build
-        info = json.loads(creds_json)
-        creds = service_account.Credentials.from_service_account_info(
-            info, scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"]
-        )
+        from app.google_auth import get_google_credentials
+        creds = get_google_credentials()
+        if not creds:
+            raise HTTPException(400, "Google not connected. Sign in with Google in Settings first.")
         service = build("sheets", "v4", credentials=creds)
         result = service.spreadsheets().values().get(
             spreadsheetId=sheet_id, range="A1:ZZ100"

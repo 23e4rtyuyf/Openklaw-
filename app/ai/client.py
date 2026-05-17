@@ -1,11 +1,16 @@
 import os
 from typing import Optional
 
-AI_PROVIDER = os.getenv("AI_PROVIDER", "openai")
-AI_MODEL = os.getenv("AI_MODEL", "gpt-4o-mini")
-AI_BASE_URL = os.getenv("AI_BASE_URL", "") or None
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+AI_BASE_URL = os.getenv("AI_BASE_URL", "") or None
+
+# Auto-detect provider: prefer Anthropic when its key is present (Replit sets this automatically)
+_default_provider = "anthropic" if ANTHROPIC_API_KEY else "openai"
+_default_model = "claude-3-5-haiku-20241022" if _default_provider == "anthropic" else "gpt-4o-mini"
+
+AI_PROVIDER = os.getenv("AI_PROVIDER", _default_provider)
+AI_MODEL = os.getenv("AI_MODEL", _default_model)
 
 
 async def complete(

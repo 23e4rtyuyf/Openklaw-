@@ -49,7 +49,7 @@ export const agentsApi = {
   trigger: (id: string, input?: string, credentials?: Record<string, string>) =>
     request<{ run_id: string }>(`/agents/${id}/run`, {
       method: 'POST',
-      body: JSON.stringify({ input: input ?? '', credentials }),
+      body: JSON.stringify({ input_data: { input: input ?? '' }, credentials }),
     }),
 }
 
