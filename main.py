@@ -10,7 +10,7 @@ load_dotenv()
 from app.database import engine, Base, run_migrations
 from app.models import Agent, Run, Message
 from app.scheduler import start_scheduler, stop_scheduler, register_agent
-from app.routers import agents, runs, chat, webhooks
+from app.routers import agents, runs, chat, webhooks, sheets as sheets_router
 from app.routers import slack as slack_router
 
 Base.metadata.create_all(bind=engine)
@@ -47,16 +47,33 @@ app.include_router(runs.router)
 app.include_router(chat.router)
 app.include_router(webhooks.router)
 app.include_router(slack_router.router)
+app.include_router(sheets_router.router)
 
-app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
+# Create uploads directory
+os.makedirs("uploads", exist_ok=True)
+
+# Serve built frontend (Vite output)
+_dist = "frontend/dist"
+if os.path.isdir(_dist):
+    app.mount("/assets", StaticFiles(directory=f"{_dist}/assets"), name="assets")
+
+    @app.get("/", include_in_schema=False)
+    @app.get("/{path:path}", include_in_schema=False)
+    def serve_frontend(path: str = ""):
+        index = f"{_dist}/index.html"
+        if path and os.path.isfile(f"{_dist}/{path}"):
+            return FileResponse(f"{_dist}/{path}")
+        return FileResponse(index)
+else:
+    # Fallback to legacy frontend directory
+    app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
+
+    @app.get("/", include_in_schema=False)
+    def serve_frontend():  # type: ignore[misc]
+        return FileResponse("frontend/index.html")
 
 
-@app.get("/")
-def serve_frontend():
-    return FileResponse("frontend/index.html")
-
-
-@app.get("/health")
+@app.get("/health", include_in_schema=True)
 def health():
     return {"status": "ok", "app": "OpenKlaw"}
 

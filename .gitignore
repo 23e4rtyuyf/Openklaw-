@@ -5,3 +5,7 @@ openklaw.db
 .env
 *.db-shm
 *.db-wal
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
+uploads/

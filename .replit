@@ -1,4 +1,4 @@
-run = "pip install -r requirements.txt -q && python main.py"
+run = "pip install -r requirements.txt -q && cd frontend && npm install --legacy-peer-deps -q && npm run build && cd .. && python main.py"
 entrypoint = "main.py"
 
 [nix]

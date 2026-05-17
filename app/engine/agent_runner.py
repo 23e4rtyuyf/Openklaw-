@@ -16,7 +16,13 @@ from app.engine.tools.google_calendar_tool import (list_events, create_event,
                                                     update_event, delete_event, check_availability)
 from app.engine.tools.google_drive_tool import (list_files, upload_file, read_file,
                                                   delete_file, share_file)
-from app.engine.tools.google_sheets_tool import read_sheet, append_rows, update_cell
+from app.engine.tools.google_sheets_tool import (
+    read_sheet, append_rows, update_cell, create_sheet, delete_rows, find_and_replace,
+    batch_update, format_range, sort_sheet, get_sheet_list, copy_sheet,
+)
+from app.engine.tools.excel_tool import read_excel, write_excel, create_excel, excel_formula, excel_chart
+from app.engine.tools.csv_tool import read_csv, write_csv, filter_csv, sort_csv, aggregate_csv, join_csv
+from app.engine.tools.data_tool import summarize_data, detect_anomalies, pivot_table
 from app.engine.tools.google_docs_tool import read_doc, create_doc, append_to_doc
 from app.engine.tools.github_tool import (github_get_repo, github_list_issues,
                                            github_create_issue, github_comment_issue,
@@ -89,6 +95,31 @@ TOOL_SCHEMAS = [
     {"type": "function", "function": {"name": "read_sheet", "description": "Read rows from a Google Sheet", "parameters": {"type": "object", "properties": {"spreadsheet_id": {"type": "string"}, "range_": {"type": "string", "description": "e.g. Sheet1!A1:D10"}, "service_account_json": {"type": "string"}}, "required": ["spreadsheet_id", "range_", "service_account_json"]}}},
     {"type": "function", "function": {"name": "append_rows", "description": "Append rows to a Google Sheet", "parameters": {"type": "object", "properties": {"spreadsheet_id": {"type": "string"}, "range_": {"type": "string"}, "rows": {"type": "array", "items": {"type": "array"}}, "service_account_json": {"type": "string"}}, "required": ["spreadsheet_id", "range_", "rows", "service_account_json"]}}},
     {"type": "function", "function": {"name": "update_cell", "description": "Update a single cell in a Google Sheet", "parameters": {"type": "object", "properties": {"spreadsheet_id": {"type": "string"}, "range_": {"type": "string"}, "value": {"type": "string"}, "service_account_json": {"type": "string"}}, "required": ["spreadsheet_id", "range_", "value", "service_account_json"]}}},
+    {"type": "function", "function": {"name": "create_sheet", "description": "Create a new Google Spreadsheet with optional headers", "parameters": {"type": "object", "properties": {"title": {"type": "string"}, "headers": {"type": "array", "items": {"type": "string"}}, "service_account_json": {"type": "string"}}, "required": ["title", "service_account_json"]}}},
+    {"type": "function", "function": {"name": "delete_rows", "description": "Delete rows by index from a Google Sheet", "parameters": {"type": "object", "properties": {"spreadsheet_id": {"type": "string"}, "sheet_id": {"type": "integer"}, "start_index": {"type": "integer"}, "end_index": {"type": "integer"}, "service_account_json": {"type": "string"}}, "required": ["spreadsheet_id", "sheet_id", "start_index", "end_index", "service_account_json"]}}},
+    {"type": "function", "function": {"name": "find_and_replace", "description": "Find and replace text in a Google Sheet", "parameters": {"type": "object", "properties": {"spreadsheet_id": {"type": "string"}, "find": {"type": "string"}, "replace": {"type": "string"}, "all_sheets": {"type": "boolean", "default": True}, "service_account_json": {"type": "string"}}, "required": ["spreadsheet_id", "find", "replace", "service_account_json"]}}},
+    {"type": "function", "function": {"name": "batch_update", "description": "Update multiple ranges in a Google Sheet at once", "parameters": {"type": "object", "properties": {"spreadsheet_id": {"type": "string"}, "updates": {"type": "array", "items": {"type": "object", "properties": {"range": {"type": "string"}, "values": {"type": "array"}}}}, "service_account_json": {"type": "string"}}, "required": ["spreadsheet_id", "updates", "service_account_json"]}}},
+    {"type": "function", "function": {"name": "format_range", "description": "Apply formatting (bold, background color) to a Google Sheet range", "parameters": {"type": "object", "properties": {"spreadsheet_id": {"type": "string"}, "sheet_id": {"type": "integer"}, "range_": {"type": "string"}, "bold": {"type": "boolean"}, "bg_color": {"type": "string", "description": "Hex color e.g. #FF0000"}, "service_account_json": {"type": "string"}}, "required": ["spreadsheet_id", "sheet_id", "service_account_json"]}}},
+    {"type": "function", "function": {"name": "sort_sheet", "description": "Sort a Google Sheet by a column", "parameters": {"type": "object", "properties": {"spreadsheet_id": {"type": "string"}, "sheet_id": {"type": "integer"}, "column_index": {"type": "integer"}, "ascending": {"type": "boolean", "default": True}, "service_account_json": {"type": "string"}}, "required": ["spreadsheet_id", "sheet_id", "column_index", "service_account_json"]}}},
+    {"type": "function", "function": {"name": "get_sheet_list", "description": "List all tab names and IDs in a Google Spreadsheet", "parameters": {"type": "object", "properties": {"spreadsheet_id": {"type": "string"}, "service_account_json": {"type": "string"}}, "required": ["spreadsheet_id", "service_account_json"]}}},
+    {"type": "function", "function": {"name": "copy_sheet", "description": "Copy a sheet tab to another Google Spreadsheet", "parameters": {"type": "object", "properties": {"source_spreadsheet_id": {"type": "string"}, "dest_spreadsheet_id": {"type": "string"}, "sheet_id": {"type": "integer"}, "service_account_json": {"type": "string"}}, "required": ["source_spreadsheet_id", "dest_spreadsheet_id", "sheet_id", "service_account_json"]}}},
+    # ── Excel ─────────────────────────────────────────────────────────────────
+    {"type": "function", "function": {"name": "read_excel", "description": "Read rows from an Excel .xlsx file", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}, "sheet_name": {"type": "string"}, "max_rows": {"type": "integer", "default": 1000}}, "required": ["file_path"]}}},
+    {"type": "function", "function": {"name": "write_excel", "description": "Write list of dicts to an Excel .xlsx file", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}, "data": {"type": "array", "items": {"type": "object"}}, "sheet_name": {"type": "string", "default": "Sheet1"}}, "required": ["file_path", "data"]}}},
+    {"type": "function", "function": {"name": "create_excel", "description": "Create a multi-sheet Excel workbook", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}, "sheets": {"type": "object", "description": "Dict of sheet_name → list of row dicts"}}, "required": ["file_path", "sheets"]}}},
+    {"type": "function", "function": {"name": "excel_formula", "description": "Write a formula to a cell in an Excel file", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}, "cell": {"type": "string"}, "formula": {"type": "string"}, "sheet_name": {"type": "string"}}, "required": ["file_path", "cell", "formula"]}}},
+    {"type": "function", "function": {"name": "excel_chart", "description": "Create a chart in an Excel sheet", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}, "sheet_name": {"type": "string"}, "chart_type": {"type": "string", "enum": ["bar", "line", "pie"]}, "data_range": {"type": "string"}, "title": {"type": "string"}, "position": {"type": "string", "default": "E1"}}, "required": ["file_path", "sheet_name", "chart_type"]}}},
+    # ── CSV ───────────────────────────────────────────────────────────────────
+    {"type": "function", "function": {"name": "read_csv", "description": "Read rows from a CSV file", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}, "delimiter": {"type": "string", "default": ","}, "encoding": {"type": "string", "default": "utf-8-sig"}, "max_rows": {"type": "integer", "default": 10000}}, "required": ["file_path"]}}},
+    {"type": "function", "function": {"name": "write_csv", "description": "Write list of dicts to a CSV file", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}, "data": {"type": "array", "items": {"type": "object"}}, "headers": {"type": "array", "items": {"type": "string"}}}, "required": ["file_path", "data"]}}},
+    {"type": "function", "function": {"name": "filter_csv", "description": "Filter rows in a CSV by column value", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}, "column": {"type": "string"}, "value": {"type": "string"}, "operator": {"type": "string", "enum": ["eq", "ne", "contains", "gt", "lt", "gte", "lte"], "default": "eq"}}, "required": ["file_path", "column", "value"]}}},
+    {"type": "function", "function": {"name": "sort_csv", "description": "Sort CSV rows by a column", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}, "column": {"type": "string"}, "ascending": {"type": "boolean", "default": True}}, "required": ["file_path", "column"]}}},
+    {"type": "function", "function": {"name": "aggregate_csv", "description": "Group-by aggregation on a CSV (sum, mean, count, min, max)", "parameters": {"type": "object", "properties": {"file_path": {"type": "string"}, "group_by": {"type": "string"}, "agg_column": {"type": "string"}, "func": {"type": "string", "enum": ["sum", "mean", "count", "min", "max"], "default": "sum"}}, "required": ["file_path", "group_by", "agg_column"]}}},
+    {"type": "function", "function": {"name": "join_csv", "description": "Join two CSV files on a common column", "parameters": {"type": "object", "properties": {"file1": {"type": "string"}, "file2": {"type": "string"}, "on_column": {"type": "string"}}, "required": ["file1", "file2", "on_column"]}}},
+    # ── Data Analysis ─────────────────────────────────────────────────────────
+    {"type": "function", "function": {"name": "summarize_data", "description": "Compute min/max/mean/median/std/unique stats for each column", "parameters": {"type": "object", "properties": {"data": {"type": "array", "items": {"type": "object"}}, "columns": {"type": "array", "items": {"type": "string"}}}, "required": ["data"]}}},
+    {"type": "function", "function": {"name": "detect_anomalies", "description": "Find outlier rows in a column using z-score", "parameters": {"type": "object", "properties": {"data": {"type": "array", "items": {"type": "object"}}, "column": {"type": "string"}, "threshold": {"type": "number", "default": 2.5}}, "required": ["data", "column"]}}},
+    {"type": "function", "function": {"name": "pivot_table", "description": "Create a pivot table from a list of dicts", "parameters": {"type": "object", "properties": {"data": {"type": "array", "items": {"type": "object"}}, "index": {"type": "string"}, "columns": {"type": "string"}, "values": {"type": "string"}, "aggfunc": {"type": "string", "enum": ["sum", "mean", "count", "min", "max"], "default": "sum"}}, "required": ["data", "index", "columns", "values"]}}},
     # ── Google Docs ───────────────────────────────────────────────────────────
     {"type": "function", "function": {"name": "read_doc", "description": "Read a Google Doc as plain text", "parameters": {"type": "object", "properties": {"document_id": {"type": "string"}, "service_account_json": {"type": "string"}}, "required": ["document_id", "service_account_json"]}}},
     {"type": "function", "function": {"name": "create_doc", "description": "Create a new Google Doc", "parameters": {"type": "object", "properties": {"title": {"type": "string"}, "content": {"type": "string"}, "service_account_json": {"type": "string"}}, "required": ["title", "service_account_json"]}}},
@@ -316,6 +347,70 @@ async def _dispatch_tool(name: str, args: dict, memory: dict, credentials: dict)
     elif name == "update_cell":
         return await update_cell(args["spreadsheet_id"], args["range_"], args["value"],
                                  args.get("service_account_json", credentials.get("google_service_account", "")))
+    elif name == "create_sheet":
+        return await create_sheet(args["title"], args.get("headers", []),
+                                  args.get("service_account_json", credentials.get("google_service_account", "")))
+    elif name == "delete_rows":
+        return await delete_rows(args["spreadsheet_id"], args["sheet_id"],
+                                 args["start_index"], args["end_index"],
+                                 args.get("service_account_json", credentials.get("google_service_account", "")))
+    elif name == "find_and_replace":
+        return await find_and_replace(args["spreadsheet_id"], args["find"], args["replace"],
+                                      args.get("all_sheets", True),
+                                      args.get("service_account_json", credentials.get("google_service_account", "")))
+    elif name == "batch_update":
+        return await batch_update(args["spreadsheet_id"], args["updates"],
+                                  args.get("service_account_json", credentials.get("google_service_account", "")))
+    elif name == "format_range":
+        return await format_range(args["spreadsheet_id"], args["sheet_id"],
+                                  args.get("range_", "A1"), args.get("bold", False),
+                                  args.get("bg_color", ""),
+                                  args.get("service_account_json", credentials.get("google_service_account", "")))
+    elif name == "sort_sheet":
+        return await sort_sheet(args["spreadsheet_id"], args["sheet_id"], args["column_index"],
+                                args.get("ascending", True),
+                                args.get("service_account_json", credentials.get("google_service_account", "")))
+    elif name == "get_sheet_list":
+        return await get_sheet_list(args["spreadsheet_id"],
+                                    args.get("service_account_json", credentials.get("google_service_account", "")))
+    elif name == "copy_sheet":
+        return await copy_sheet(args["source_spreadsheet_id"], args["dest_spreadsheet_id"],
+                                args["sheet_id"],
+                                args.get("service_account_json", credentials.get("google_service_account", "")))
+    # ── Excel ─────────────────────────────────────────────────────────────────
+    elif name == "read_excel":
+        return await read_excel(args["file_path"], args.get("sheet_name", ""), args.get("max_rows", 1000))
+    elif name == "write_excel":
+        return await write_excel(args["file_path"], args["data"], args.get("sheet_name", "Sheet1"))
+    elif name == "create_excel":
+        return await create_excel(args["file_path"], args["sheets"])
+    elif name == "excel_formula":
+        return await excel_formula(args["file_path"], args["cell"], args["formula"], args.get("sheet_name", ""))
+    elif name == "excel_chart":
+        return await excel_chart(args["file_path"], args["sheet_name"], args["chart_type"],
+                                 args.get("data_range", ""), args.get("title", ""), args.get("position", "E1"))
+    # ── CSV ───────────────────────────────────────────────────────────────────
+    elif name == "read_csv":
+        return await read_csv(args["file_path"], args.get("delimiter", ","),
+                              args.get("encoding", "utf-8-sig"), args.get("max_rows", 10000))
+    elif name == "write_csv":
+        return await write_csv(args["file_path"], args["data"], args.get("headers"))
+    elif name == "filter_csv":
+        return await filter_csv(args["file_path"], args["column"], args["value"], args.get("operator", "eq"))
+    elif name == "sort_csv":
+        return await sort_csv(args["file_path"], args["column"], args.get("ascending", True))
+    elif name == "aggregate_csv":
+        return await aggregate_csv(args["file_path"], args["group_by"], args["agg_column"], args.get("func", "sum"))
+    elif name == "join_csv":
+        return await join_csv(args["file1"], args["file2"], args["on_column"])
+    # ── Data Analysis ─────────────────────────────────────────────────────────
+    elif name == "summarize_data":
+        return await summarize_data(args["data"], args.get("columns"))
+    elif name == "detect_anomalies":
+        return await detect_anomalies(args["data"], args["column"], args.get("threshold", 2.5))
+    elif name == "pivot_table":
+        return await pivot_table(args["data"], args["index"], args["columns"],
+                                 args["values"], args.get("aggfunc", "sum"))
     # ── Google Docs ───────────────────────────────────────────────────────────
     elif name == "read_doc":
         return await read_doc(args["document_id"],
